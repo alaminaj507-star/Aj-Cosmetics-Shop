@@ -59,12 +59,63 @@ export default function Home() {
     if (ex.error) setMessage("খরচের তালিকা লোড হয়নি: "+ex.error.message); else setExpenses((ex.data??[]) as Expense[]);
   },[]);
 
-  useEffect(() => {
-    if (!url || !key) { setAuthLoading(false); setMessage("Supabase URL/Publishable Key পাওয়া যায়নি। Environment Variables সেট করো।"); return; }
-    supabase.auth.getSession().then(({data})=>{setUser(data.session?.user??null);setAuthLoading(false);}).catch(()=>setAuthLoading(false));
-    const {data:{subscription}} = supabase.auth.onAuthStateChange((_event,session)=>setUser(session?.user??null));
-    return ()=>subscription.unsubscribe();
-  },[]);
+ 
+
+useEffect(() => {
+  if (!url || !key) {
+    setAuthLoading(false);
+    setMessage("Supabase URL বা Publishable Key পাওয়া যায়নি।");
+    return;
+  }
+
+  let active = true;
+
+  const timer = window.setTimeout(() => {
+    if (active) {
+      setAuthLoading(false);
+      setMessage(
+        "লগইন যাচাই করতে সময় লাগছে। ইন্টারনেট ও Supabase সংযোগ যাচাই করো।"
+      );
+    }
+  }, 8000);
+
+  supabase.auth
+    .getSession()
+    .then(({ data, error }) => {
+      if (!active) return;
+      window.clearTimeout(timer);
+
+      if (error) {
+        setMessage("সেশন যাচাই হয়নি: " + error.message);
+      }
+
+      setUser(data.session?.user ?? null);
+      setAuthLoading(false);
+    })
+    .catch((error: unknown) => {
+      if (!active) return;
+      window.clearTimeout(timer);
+
+      const detail =
+        error instanceof Error ? error.message : "অজানা সমস্যা";
+
+      setMessage("লগইন যাচাইয়ের সমস্যা: " + detail);
+      setAuthLoading(false);
+    });
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (active) setUser(session?.user ?? null);
+  });
+
+  return () => {
+    active = false;
+    window.clearTimeout(timer);
+    subscription.unsubscribe();
+  };
+}, []);
+
   useEffect(()=>{if(user) void loadAll(); else {setProducts([]);setSales([]);setPurchases([]);setExpenses([]);}},[user,loadAll]);
 
   async function login(e:React.FormEvent<HTMLFormElement>) {
