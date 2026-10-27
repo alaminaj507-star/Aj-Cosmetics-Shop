@@ -132,7 +132,10 @@ export default function Home() {
   const outProducts=products.filter(p=>p.stock===0);
   const totalExpenses=expenses.reduce((s,e)=>s+n(e.amount),0);
   const salesRevenue=sales.reduce((s,r)=>s+n(r.total??r.total_amount??r.amount??r.sale_total),0);
-  const purchaseSpend=purchases.reduce((s,r)=>s+n(r.total_cost??(n(r.quantity)*n(r.purchase_price)),0),0);
+  const purchaseSpend = purchases.reduce(
+  (s, r) => s + n(r.total_cost ?? (n(r.quantity) * n(r.purchase_price))),
+  0
+);
   const grossProfit=sales.reduce((sum,r)=>{const p=products.find(x=>x.id===Number(r.product_id));const qty=n(r.quantity??r.qty);const rev=n(r.total??r.total_amount??r.amount??r.sale_total);return sum+(p&&qty>0?rev-qty*n(p.purchase_price):0);},0);
 
   if(authLoading)return <main style={S.main}>লগইন অবস্থা যাচাই হচ্ছে...</main>;
